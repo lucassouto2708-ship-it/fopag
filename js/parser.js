@@ -18,8 +18,16 @@
 (function (global) {
   "use strict";
 
-  const NUM = "-?[\\d.]+,\\d{2}";
-  const num = (s) => parseFloat(String(s).replace(/\./g, "").replace(",", "."));
+  // Valores podem vir como "1.234,56" ou "1.234.56" (o último separador sempre separa os centavos).
+  const NUM = "-?[\\d.,]*\\d[.,]\\d{2}";
+  const num = (s) => {
+    const t = String(s).trim();
+    const neg = t.startsWith("-");
+    const m = t.replace(/^-/, "").match(/^(.*)[.,](\d{2})$/);
+    if (!m) return NaN;
+    const v = parseFloat((m[1].replace(/[.,]/g, "") || "0") + "." + m[2]);
+    return neg ? -v : v;
+  };
   const cents = (v) => Math.round(v * 100);
 
   /** Decodifica o arquivo. O sistema gera ISO-8859-1; se vier em UTF-8, também funciona. */

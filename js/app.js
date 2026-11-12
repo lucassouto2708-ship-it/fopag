@@ -181,7 +181,7 @@
         const novo = el.textContent.replace(/\s+/g, " ").trim();
         if (!novo || novo === original) { el.textContent = original; return; }
         const ed = lerEdicoes();
-        ed[el.dataset.cod] = novo;
+        el.dataset.cod.split("|").forEach((cod) => (ed[cod] = novo)); // unidades juntadas recebem o mesmo nome
         salvarEdicoes(ed);
         estado.modelo = window.FolhaModelo.montar(estado.lido, ed);
         desenhar();

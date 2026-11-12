@@ -39,7 +39,7 @@
   const ESCALA_MIN = 0.72;  // abaixo disso, o restante vai para uma folha de continuação
 
   function colunaSecretaria(m, s) {
-    let h = `<div class="col"><div class="box sec"><span class="ed" data-cod="${s.codigo}" title="${esc(s.original)}">${esc(s.nome)}</span>
+    let h = `<div class="col"><div class="box sec"><span class="ed" data-cod="${(s.codigos || [s.codigo]).join("|")}" title="${esc(s.original)}">${esc(s.nome)}</span>
       <span class="q">${int(s.servidores.length)} funcionários</span><i>${pct(s.servidores.length / m.total)} da folha</i></div><div class="units">`;
     for (const t of s.setores) {
       const vincs = agrupar(t.servidores, (x) => x.vinculo);
@@ -212,6 +212,14 @@
       }
       d.title = `${nm}: ${f} funcionários`;
       tm.appendChild(d);
+      // Se o texto não couber no bloco, usa a versão compacta (e, se ainda não couber, só o número).
+      // (o conteúdo é alinhado embaixo, então o excesso sobe e não aparece em scrollHeight: mede os filhos)
+      const altura = () => [...d.children].reduce((a, c) => a + c.getBoundingClientRect().height, 0) + 8;
+      const util = () => d.clientHeight - parseFloat(getComputedStyle(d).paddingTop) - parseFloat(getComputedStyle(d).paddingBottom);
+      if (altura() > util() || d.scrollWidth > d.clientWidth + 1) {
+        d.innerHTML = `<div class="bn" style="font-size:${Math.min(12, fit)}px">${esc(nm)}</div><div class="bv" style="font-size:${Math.max(14, Math.min(26, s / 5))}px">${int(f)}</div>`;
+        if (altura() > util()) d.innerHTML = `<div class="bv" style="font-size:12px">${int(f)}</div><div style="font-size:7px;line-height:1.05">${esc(nm)}</div>`;
+      }
     }
   }
 

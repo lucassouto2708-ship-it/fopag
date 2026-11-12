@@ -40,7 +40,37 @@
     [/\bPES\b/g, "PESSOAL"],
     [/\bAMB\./g, "AMBIENTE"],
     [/\bMUN\./g, "MUNICIPAL"],
-  ];
+    // Abreviações sem ponto (comuns em outros municípios)
+    [/\bMANUT\b\.?/g, "MANUTENÇÃO"],
+    [/\bATIVIDAD\.|\bATIVID\b|\bATIVDADES\b|\bATIV\b/g, "ATIVIDADES"],
+    [/\bPROGR?\b\.?/g, "PROGRAMA"],
+    [/\bSERV\b/g, "SERVIÇO"],
+    [/\bSEC\b\.?/g, "SECRETARIA"],
+    [/\bMUNI\b\.?|\bMUN\b/g, "MUNICIPAL"],
+    [/\bADMIN\b\.?/g, "ADMINISTRAÇÃO"],
+    [/\bCONVI\b/g, "CONVIVÊNCIA"],
+    [/\bFORT\b/g, "FORTALECIMENTO"],
+    [/\bPROT\b/g, "PROTEÇÃO"],
+    [/\bSOC\b/g, "SOCIAL"],
+    [/\bNECES\s+ESP\b/g, "NECESSIDADES ESPECIAIS"],
+    [/\bTRANSP\b/g, "TRANSPORTE"],
+    [/\bCORREG\b\.?/g, "CORREGEDORIA"],
+    [/\bUNID\b/g, "UNIDADES"],
+    [/\bCOMUNT\b/g, "COMUNITÁRIO"],
+    [/\bCONT\b/g, "CONTROLE"],
+    [/\bFISCALIZ\b/g, "FISCALIZAÇÃO"],
+    [/\bLICENCIAM\b/g, "LICENCIAMENTO"],
+    [/\bDESENV\b\.?/g, "DESENVOLVIMENTO"],
+    [/\bINFRA\s+ESTRUTURA\b/g, "INFRAESTRUTURA"],
+    [/\bASSIT\b/g, "ASSISTÊNCIA"],
+    [/\bHABI\b/g, "HABITAÇÃO"],
+    [/\bTRANPOR\b/g, "TRANSPORTE"],
+    [/\bM\s+(?=DE\b)/g, "MUNICIPAL "],
+  ].map(([re, rep]) => [
+    // "\b" do JavaScript não reconhece letras acentuadas: troca por limites que reconhecem.
+    new RegExp(re.source.replace(/\\b(?=[A-Za-z(])/g, "(?<![A-Za-zÀ-ÿ])").replace(/\\b/g, "(?![A-Za-zÀ-ÿ])"), re.flags),
+    rep,
+  ]);
 
   // Acentos que o sistema costuma omitir.
   const ACENTOS = {
@@ -66,9 +96,12 @@
     POLITICAS: "POLÍTICAS", TECNICA: "TÉCNICA", TECNICOS: "TÉCNICOS", EDUCACAO: "EDUCAÇÃO", EDUCAÇAO: "EDUCAÇÃO",
     ORGÃO: "ÓRGÃO", PREDIOS: "PRÉDIOS", VETERINARIA: "VETERINÁRIA", ODONTOLOGIA: "ODONTOLOGIA",
     ESCOLAR: "ESCOLAR", ENDEMIAS: "ENDEMIAS", AS: "AS", PRE: "PRÉ",
+    FISCALIZAÇA: "FISCALIZAÇÃO", FISCALIZAÇÃ: "FISCALIZAÇÃO", SEÇAO: "SEÇÃO", FISCALIZAÇAO: "FISCALIZAÇÃO", VACINAÇAO: "VACINAÇÃO", MEDICAS: "MÉDICAS", ODONTOLOGICO: "ODONTOLÓGICO",
+    FARMACEUTICAS: "FARMACÊUTICAS", MECANICA: "MECÂNICA", FUNERARIO: "FUNERÁRIO", CEMITERIO: "CEMITÉRIO",
+    TRANSITO: "TRÂNSITO", PRAÇAS: "PRAÇAS", ECONOMICO: "ECONÔMICO", INFANCIA: "INFÂNCIA", DOENÇAS: "DOENÇAS",
   };
 
-  const SIGLAS = new Set(["FUNDEB", "PSF", "PAB", "CRAS", "CREAS", "SCFV", "SUS", "ESF", "FNAS", "MDE", "ACS", "ACE", "PNAE", "PNATE", "SAMU", "CAPS", "UBS", "PETI", "IGD", "FMS", "FMAS", "RPPS", "INSS", "TI"]);
+  const SIGLAS = new Set(["FUNDEB", "PSF", "PAB", "CRAS", "CREAS", "SCFV", "SUS", "ESF", "FNAS", "MDE", "ACS", "ACE", "PNAE", "PNATE", "SAMU", "CAPS", "UBS", "PETI", "IGD", "FMS", "FMAS", "RPPS", "INSS", "TI", "PACS", "PAIF", "SUAS", "CAD", "EJA", "APAE"]);
   const MINUSC = new Set(["DE", "DA", "DO", "DAS", "DOS", "E", "A", "O", "EM", "PARA", "COM", "POR", "NA", "NO", "AS", "OS", "À"]);
 
   function titulo(s) {
@@ -89,7 +122,7 @@
     let s = String(nome || "").toUpperCase().replace(/\s+/g, " ").trim();
     // Remove referência de ficha no fim: "- FICHA 49", "F 49", "FICHA 205", "- 198", " F"
     s = s.replace(/\s*[-–]?\s*\b(FICHA|FIC\.?|F)\s*\.?\s*\d+\s*$/g, "");
-    s = s.replace(/\s*-\s*\d+\s*$/g, "").replace(/\s+F$/g, "");
+    s = s.replace(/\s*-\s*\d+\s*$/g, "").replace(/\s+F$/g, "").replace(/\s+F\d{2,4}$/g, "");
     for (const [re, rep] of ABREV) s = s.replace(re, rep);
     s = s.replace(/[A-ZÇÃÕÉÍÓÚÂÊÔ]+/g, (w) => ACENTOS[w] || w);
     s = s.replace(/\s*-\s*$/, "").replace(/\s{2,}/g, " ").replace(/\s+,/g, ",").replace(/,(?=\S)/g, ", ").trim();
@@ -103,9 +136,10 @@
       .replace(/^Manutenção\s+(?:(?:do|da|de|dos|das)\s+)?/i, "")
       .replace(/^Aplicação\s+(?:de\s+)?Recursos?\s+(?:(?:do|da|de|dos|das)\s+)?/i, "")
       .replace(/^Aplicação\s+(?:(?:do|da|de)\s+)?/i, "")
-      .replace(/^Atividades?\s+(?:(?:do|da|de|dos|das)\s+)?(?:Programa\s+)?/i, "")
+      .replace(/^Atividades?\s+(?:(?:do|da|de|dos|das)\s+)?(?:Programa\s+(?!Municipal))?/i, "")
       .replace(/^Serviço\s+do\s+/i, "Serviço de ")
       .trim();
+    if (/^(da\s+|do\s+)?Secretaria(\s+Municipal)?$/i.test(s) || !s) s = "Gestão da Secretaria";
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
@@ -125,28 +159,38 @@
   function montar(lido, edicoes) {
     edicoes = edicoes || {};
     const N = lido.nomes;
-    const secretarias = new Map();
+    const secretarias = new Map(); // chave = nome da secretaria (unidades com o mesmo nome são juntadas)
 
     for (const s of lido.servidores) {
       const p = String(s.lotacao || "").split(".");
-      const codSec = p.slice(0, 2).join(".");
-      const codSet = p.length >= 3 ? p.slice(0, 3).join(".") : codSec;
-      const codVin = p.length >= 4 ? p.slice(0, 4).join(".") : null;
+      // Se o 1º nível é o órgão (ex.: "002 - PREFEITURA MUNICIPAL"), a secretaria é o 2º nível;
+      // senão (ex.: "009 - SECRETARIA M DE SAUDE"), a secretaria já é o 1º nível.
+      const off = p.length >= 2 && ehOrgao(N[p[0]]) ? 1 : 0;
+      const codSec = p.slice(0, off + 1).join(".");
+      const codSet = p.length >= off + 2 ? p.slice(0, off + 2).join(".") : codSec;
+      const codVin = p.length >= off + 3 ? p.slice(0, off + 3).join(".") : null;
 
-      if (!secretarias.has(codSec)) {
-        secretarias.set(codSec, {
+      const nomeSec = edicoes[codSec] || nomeSecretaria(N[codSec] || codSec);
+      const chaveSec = semAcento(nomeSec);
+      if (!secretarias.has(chaveSec)) {
+        secretarias.set(chaveSec, {
           codigo: codSec,
+          codigos: [],
           original: N[codSec] || codSec,
-          nome: edicoes[codSec] || nomeSecretaria(N[codSec] || codSec),
+          nome: nomeSec,
           setores: new Map(),
           servidores: [],
         });
       }
-      const sec = secretarias.get(codSec);
+      const sec = secretarias.get(chaveSec);
+      if (!sec.codigos.includes(codSec)) {
+        sec.codigos.push(codSec);
+        if (sec.codigos.length > 1) sec.original += " + " + (N[codSec] || codSec);
+      }
       if (!sec.setores.has(codSet)) {
         sec.setores.set(codSet, {
           codigo: codSet,
-          acao: p[2] || "",
+          acao: codSet.split(".").pop(),
           original: N[codSet] || codSet,
           nome: edicoes[codSet] || nomeSetor(N[codSet] || codSet),
           servidores: [],
@@ -170,7 +214,7 @@
       const cont = {};
       setores.forEach((x) => (cont[x.nome] = (cont[x.nome] || 0) + 1));
       setores.forEach((x) => {
-        if (cont[x.nome] > 1 && !edicoes[x.codigo]) x.nome = `${x.nome} (ação ${x.acao})`;
+        if (cont[x.nome] > 1 && !edicoes[x.codigo]) x.nome = sec.codigos.length > 1 ? `${x.nome} (${x.codigo})` : `${x.nome} (ação ${x.acao})`;
         x.servidores.forEach((s) => (s.setor = x.nome));
         x.liquido = soma(x.servidores);
       });
@@ -179,7 +223,7 @@
     });
     lista.sort((a, b) => b.servidores.length - a.servidores.length || a.codigo.localeCompare(b.codigo));
 
-    const raiz = Object.keys(N).find((k) => !k.includes("."));
+    const raiz = Object.keys(N).find((k) => !k.includes(".") && ehOrgao(N[k]));
     const todos = lista.flatMap((s) => s.servidores);
     return {
       meta: lido.meta,
@@ -193,6 +237,14 @@
       proventos: todos.reduce((a, s) => a + (s.proventos || 0), 0),
       conferencia: lido.conferencia,
     };
+  }
+
+  /** Nome de órgão/entidade (topo do organograma), e não de secretaria. */
+  function ehOrgao(nome) {
+    return /^(PREFEITURA|MUNIC[IÍ]PIO|C[AÂ]MARA|PODER\s+(EXECUTIVO|LEGISLATIVO)|ENTIDADE)\b/i.test(String(nome || "").trim());
+  }
+  function semAcento(s) {
+    return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
   }
 
   function soma(L) {
