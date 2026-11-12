@@ -189,6 +189,25 @@
     });
   }
 
+  /* ---------- Tema claro/escuro ---------- */
+  const btnTema = $("#btn-tema");
+  const escuroSistema = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : { matches: false, addEventListener() {} };
+  const temaAtual = () => document.documentElement.getAttribute("data-theme") || (escuroSistema.matches ? "dark" : "light");
+  function atualizarBotaoTema() {
+    const escuro = temaAtual() === "dark";
+    btnTema.setAttribute("aria-pressed", String(escuro));
+    btnTema.querySelector(".btn-tema-txt").textContent = escuro ? "Tema claro" : "Tema escuro";
+    btnTema.title = escuro ? "Mudar para o tema claro" : "Mudar para o tema escuro";
+  }
+  btnTema.addEventListener("click", () => {
+    const novo = temaAtual() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", novo);
+    try { localStorage.setItem("fopag:tema", novo); } catch (e) { /* sem armazenamento: vale só nesta visita */ }
+    atualizarBotaoTema();
+  });
+  if (escuroSistema.addEventListener) escuroSistema.addEventListener("change", atualizarBotaoTema);
+  atualizarBotaoTema();
+
   /* ---------- Botões ---------- */
   const nomeBase = () => {
     const m = estado.modelo;

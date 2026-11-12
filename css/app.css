@@ -118,6 +118,21 @@ body::before {
   display: inline-flex; align-items: center; gap: 6px; color: var(--texto-2); font-size: 12px; white-space: nowrap;
 }
 .appbar-info svg { stroke: currentColor; }
+.appbar-in > .appbar-info { margin-left: auto; }
+
+/* Alternador de tema */
+.btn-tema {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
+  font: 500 13px/1 var(--ui); color: var(--texto-2); white-space: nowrap;
+  background: transparent; border: 1px solid var(--borda); border-radius: var(--r-md); cursor: pointer;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.btn-tema:hover { background: var(--superficie-2); color: var(--texto); border-color: var(--borda-forte); }
+.btn-tema:focus-visible { outline: none; box-shadow: var(--foco); }
+.btn-tema svg { stroke: currentColor; }
+.btn-tema .ic-sol { display: none; }
+.btn-tema[aria-pressed="true"] .ic-sol { display: block; }
+.btn-tema[aria-pressed="true"] .ic-lua { display: none; }
 
 /* ---------- Conteúdo ---------- */
 .conteudo {
@@ -290,9 +305,12 @@ body::before {
   .indice ol { display: flex; gap: 4px; overflow-x: auto; }
   .indice a { white-space: nowrap; grid-template-columns: auto auto; }
   .appbar-info { display: none; }
+  .btn-tema { margin-left: auto; }
 }
 @media (max-width: 640px) {
   .marca-desc { display: none; }
+  .btn-tema-txt { display: none; }
+  .btn-tema { width: 32px; padding: 0; justify-content: center; }
   .envio { margin-top: 8px; }
   .drop { flex-wrap: wrap; padding: 20px 16px; }
   .drop-status { margin-left: 0; width: 100%; }
@@ -316,7 +334,7 @@ body::before {
 /* ---------- Impressão / PDF: só as folhas, uma por página ---------- */
 @media print {
   html, body { background: #fff !important; }
-  body::before, .appbar, .envio, .painel, .indice, .rotulo { display: none !important; }
+  body::before, .appbar, .btn-tema, .envio, .painel, .indice, .rotulo { display: none !important; }
   .conteudo { padding: 0; max-width: none; }
   .area { display: block; }
   .folhas { display: block; gap: 0; padding: 0; border: 0; background: none; }

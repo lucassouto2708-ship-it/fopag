@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+  <script>
+    /* Aplica o tema salvo antes de desenhar a página (evita piscar). */
+    try { var t = localStorage.getItem("fopag:tema"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/relatorio.css">
 </head>
@@ -25,6 +29,11 @@
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5" fill="none" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke-width="1.6"/></svg>
         Processamento local, no seu navegador
       </span>
+      <button type="button" class="btn-tema" id="btn-tema" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+        <svg class="ic-lua" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        <svg class="ic-sol" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" fill="none" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span class="btn-tema-txt">Tema escuro</span>
+      </button>
     </div>
   </header>
 
