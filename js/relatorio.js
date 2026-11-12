@@ -34,28 +34,67 @@
     return p;
   }
 
-  /* ---------- 1. Organograma ---------- */
-  function organograma(m) {
-    const p = folha("pg-organograma");
-    const nSet = m.secretarias.reduce((a, s) => a + s.setores.length, 0);
-    let h = cabecalho(m, `Organograma da Folha — \u0000MUN\u0000`, `${int(m.total)} funcionários · ${m.secretarias.length} secretarias · ${nSet} setores · líquido total ${brl(m.liquido)}`);
-    h = h.replace("\u0000MUN\u0000", `<span class="ed" data-cod="_municipio" title="Nome do município">${esc(m.municipio)}</span>`);
-    h += `<div class="fit"><div class="org">
-      <div class="box root"><span class="ed" data-cod="_orgao" title="Nome do órgão">${esc(m.orgao)}</span><span class="q">${int(m.total)} funcionários</span></div><div class="vl"></div>
-      <div class="row">`;
-    for (const s of m.secretarias) {
-      h += `<div class="col"><div class="box sec"><span class="ed" data-cod="${s.codigo}" title="${esc(s.original)}">${esc(s.nome)}</span>
-        <span class="q">${int(s.servidores.length)} funcionários</span><i>${pct(s.servidores.length / m.total)} da folha</i></div><div class="units">`;
-      for (const t of s.setores) {
-        const vincs = agrupar(t.servidores, (x) => x.vinculo);
-        h += `<div class="unit"><h3><span class="ed" data-cod="${t.codigo}" title="${esc(t.original)}">${esc(t.nome)}</span><b>${int(t.servidores.length)}</b></h3>
-          <ul>${vincs.map(([v, L]) => `<li><span>${esc(v)}</span><b>${L.length}</b></li>`).join("")}</ul></div>`;
-      }
-      h += `</div></div>`;
+  /* ---------- 1. Organograma (uma ou mais folhas) ---------- */
+  const MAX_COLS = 9;       // acima disso, as secretarias quebram em linhas
+  const ESCALA_MIN = 0.72;  // abaixo disso, o restante vai para uma folha de continuação
+
+  function colunaSecretaria(m, s) {
+    let h = `<div class="col"><div class="box sec"><span class="ed" data-cod="${s.codigo}" title="${esc(s.original)}">${esc(s.nome)}</span>
+      <span class="q">${int(s.servidores.length)} funcionários</span><i>${pct(s.servidores.length / m.total)} da folha</i></div><div class="units">`;
+    for (const t of s.setores) {
+      const vincs = agrupar(t.servidores, (x) => x.vinculo);
+      h += `<div class="unit"><h3><span class="ed" data-cod="${t.codigo}" title="${esc(t.original)}">${esc(t.nome)}</span><b>${int(t.servidores.length)}</b></h3>
+        <ul>${vincs.map(([v, L]) => `<li><span>${esc(v)}</span><b>${L.length}</b></li>`).join("")}</ul></div>`;
     }
-    h += `</div></div></div>`;
-    p.innerHTML = h;
-    return p;
+    return h + `</div></div>`;
+  }
+
+  function cabecalhoOrg(m, continuacao) {
+    const nSet = m.secretarias.reduce((a, s) => a + s.setores.length, 0);
+    let h = cabecalho(m, `Organograma da Folha — \u0000MUN\u0000${continuacao ? " (continuação)" : ""}`,
+      `${int(m.total)} funcionários · ${m.secretarias.length} secretarias · ${nSet} setores · líquido total ${brl(m.liquido)}`);
+    return h.replace("\u0000MUN\u0000", continuacao ? esc(m.municipio) : `<span class="ed" data-cod="_municipio" title="Nome do município">${esc(m.municipio)}</span>`);
+  }
+  function raizOrg(m, continuacao) {
+    return continuacao
+      ? `<div class="box root cont">${esc(m.orgao)}<span class="q">continuação do organograma</span></div>`
+      : `<div class="box root"><span class="ed" data-cod="_orgao" title="Nome do órgão">${esc(m.orgao)}</span><span class="q">${int(m.total)} funcionários</span></div>`;
+  }
+
+  function organograma(m, container) {
+    const S = m.secretarias;
+    // Poucas secretarias: uma linha só, centralizada (layout clássico).
+    if (S.length <= MAX_COLS) {
+      const p = folha("pg-organograma");
+      p.innerHTML = cabecalhoOrg(m, false) + `<div class="fit"><div class="org">${raizOrg(m, false)}<div class="vl"></div>
+        <div class="row">${S.map((s) => colunaSecretaria(m, s)).join("")}</div></div></div><footer class="rf"><span>&nbsp;</span></footer>`;
+      container.appendChild(p);
+      return [p];
+    }
+    // Muitas secretarias: linhas de até MAX_COLS colunas, ligadas por um tronco à esquerda.
+    const nLinhas = Math.ceil(S.length / MAX_COLS);
+    const porLinha = Math.ceil(S.length / nLinhas);
+    const linhas = [];
+    for (let i = 0; i < S.length; i += porLinha) linhas.push(S.slice(i, i + porLinha));
+    const linhaHTML = (L) => `<div class="linha" style="--cols:${porLinha}"><div class="row">${L.map((s) => colunaSecretaria(m, s)).join("")}</div></div>`;
+
+    const pages = [];
+    let i = 0;
+    while (i < linhas.length) {
+      const cont = pages.length > 0;
+      const p = folha("pg-organograma" + (cont ? "-" + (pages.length + 1) : ""));
+      p.innerHTML = cabecalhoOrg(m, cont) + `<div class="fit"><div class="org multi">${raizOrg(m, cont)}<div class="vl"></div><div class="ramal"></div></div></div><footer class="rf"><span>&nbsp;</span></footer>`;
+      container.appendChild(p);
+      const fit = p.querySelector(".fit"), org = p.querySelector(".org");
+      let n = 0;
+      while (i < linhas.length) {
+        org.insertAdjacentHTML("beforeend", linhaHTML(linhas[i]));
+        if (n > 0 && org.scrollHeight * ESCALA_MIN > fit.clientHeight) { org.lastElementChild.remove(); break; }
+        i++; n++;
+      }
+      pages.push(p);
+    }
+    return pages;
   }
 
   /* ---------- 2. Tabela de setores (pode ocupar mais de uma folha) ---------- */
@@ -128,24 +167,34 @@
     }
   }
 
+  /** Até `k` secretarias; o restante vira um bloco "Demais secretarias" (só para gráficos). */
+  function principais(m, k) {
+    const S = m.secretarias;
+    if (S.length <= k + 1) return S;
+    const resto = S.slice(k - 1);
+    const serv = resto.flatMap((s) => s.servidores);
+    return S.slice(0, k - 1).concat([{ nome: `Demais ${resto.length} secretarias`, servidores: serv, liquido: soma(serv), demais: true }]);
+  }
+
   function panorama(m) {
     const p = folha("pg-panorama");
-    const S = m.secretarias, max = S[0].servidores.length;
-    const d2 = S.slice(0, 2), q2 = d2.reduce((a, s) => a + s.servidores.length, 0), l2 = d2.reduce((a, s) => a + s.liquido, 0);
-    const q4 = S.slice(0, 4).reduce((a, s) => a + s.servidores.length, 0);
+    const S = principais(m, 16), max = Math.max(...S.map((s) => s.servidores.length));
+    const d2 = m.secretarias.slice(0, 2), q2 = d2.reduce((a, s) => a + s.servidores.length, 0), l2 = d2.reduce((a, s) => a + s.liquido, 0);
+    const q4 = m.secretarias.slice(0, 4).reduce((a, s) => a + s.servidores.length, 0);
     p.innerHTML = cabecalho(m, "Onde a folha pesa mais", "Panorama geral: cada bloco é uma secretaria, do tamanho do seu número de funcionários") +
       `<div class="pano"><div class="tm"></div><aside class="side">
         <div><h2>Escala de cor (funcionários)</h2><div class="scale">${[0, .2, .4, .6, .8, 1].map((t) => `<span style="background:${cor(.15 + .85 * t)}"></span>`).join("")}</div><div class="sl"><span>1</span><span>${max}</span></div></div>
-        <div class="insight"><b>${d2.map((s) => esc(s.nome)).join("</b> e <b>")}</b> somam <b>${int(q2)}</b> dos ${int(m.total)} funcionários (<b>${pct(q2 / m.total)}</b>) e <b>${brl(l2)}</b> do líquido (<b>${pct(l2 / m.liquido)}</b>).${S.length > 4 ? ` As 4 maiores secretarias concentram <b>${pct(q4 / m.total)}</b> da folha.` : ""}</div>
+        <div class="insight"><b>${d2.map((s) => esc(s.nome)).join("</b> e <b>")}</b> somam <b>${int(q2)}</b> dos ${int(m.total)} funcionários (<b>${pct(q2 / m.total)}</b>) e <b>${brl(l2)}</b> do líquido (<b>${pct(l2 / m.liquido)}</b>).${m.secretarias.length > 4 ? ` As 4 maiores secretarias concentram <b>${pct(q4 / m.total)}</b> da folha.` : ""}</div>
         <div><h2>Funcionários por secretaria</h2><div class="bars">${S.map((s) => `<span>${esc(s.nome)}</span><span class="t"><span style="width:${s.servidores.length / max * 100}%;background:${cor(.15 + .85 * Math.sqrt(s.servidores.length / max))}"></span></span><span class="num"><b>${int(s.servidores.length)}</b></span>`).join("")}</div></div>
       </aside></div>`;
     return p;
   }
   function desenharPanorama(p, m) {
     const tm = p.querySelector(".tm");
-    const W = tm.clientWidth, H = tm.clientHeight, max = m.secretarias[0].servidores.length;
+    const W = tm.clientWidth, H = tm.clientHeight, lista = principais(m, 16);
+    const max = Math.max(...lista.map((s) => s.servidores.length));
     const out = [];
-    squarify(m.secretarias.map((s) => ({ s, v: s.servidores.length })), 0, 0, W, H, out);
+    squarify(lista.map((s) => ({ s, v: s.servidores.length })), 0, 0, W, H, out);
     for (const g of out) {
       const f = g.s.servidores.length, k = Math.sqrt(f / max), nm = g.s.nome;
       const d = document.createElement("div");
@@ -169,8 +218,8 @@
   /* ---------- 4. Peso por secretaria ---------- */
   function pesoSecretarias(m) {
     const p = folha("pg-secretarias");
-    const S = m.secretarias;
-    const maxF = S[0].servidores.length, maxL = Math.max(...S.map((s) => s.liquido));
+    const S = m.secretarias, G = principais(m, 12);
+    const maxF = Math.max(...G.map((s) => s.servidores.length)), maxL = Math.max(...G.map((s) => s.liquido));
     const barra = (L, val, max, fmt, tot) => L.map((s) => {
       const v = val(s);
       return `<span>${esc(s.nome)}</span><span class="t"><span style="width:${v / max * 100}%;background:${cor(.15 + .85 * Math.sqrt(v / max))}"></span></span><span class="num"><b>${fmt(v)}</b> · ${pct(v / tot)}</span>`;
@@ -178,9 +227,9 @@
     const sit = agrupar(m.servidores, (x) => x.situacao || "Não informado");
     const maxSit = sit[0][1].length;
     p.innerHTML = cabecalho(m, "Peso por secretaria", "Comparação por número de funcionários, valor líquido pago e situação funcional") +
-      `<div class="grid2"><div class="blk">
-        <h2>Funcionários por secretaria</h2><div class="bars">${barra(S, (s) => s.servidores.length, maxF, int, m.total)}</div>
-        <h2 class="mt">Líquido pago por secretaria</h2><div class="bars">${barra(S.slice().sort((a, b) => b.liquido - a.liquido), (s) => s.liquido, maxL, brl, m.liquido)}</div>
+      `<div class="fit"><div class="grid2"><div class="blk">
+        <h2>Funcionários por secretaria</h2><div class="bars">${barra(G, (s) => s.servidores.length, maxF, int, m.total)}</div>
+        <h2 class="mt">Líquido pago por secretaria</h2><div class="bars">${barra(G.filter((s) => !s.demais).sort((a, b) => b.liquido - a.liquido).concat(G.filter((s) => s.demais)), (s) => s.liquido, maxL, brl, m.liquido)}</div>
         <h2 class="mt">Situação funcional</h2><div class="bars">${sit.map(([k, L]) => `<span>${esc(global.FolhaModelo.titulo(k))}</span><span class="t"><span style="width:${L.length / maxSit * 100}%;background:${cor(.15 + .85 * Math.sqrt(L.length / maxSit))}"></span></span><span class="num"><b>${int(L.length)}</b> · ${pct(L.length / m.total)}</span>`).join("")}</div>
       </div><div class="blk">
         <h2>Resumo por secretaria</h2><table class="tab-resumo"><thead><tr><th>Secretaria</th><th class="r">Setores</th><th class="r">Funcionários</th><th class="r">Proventos</th><th class="r">Líquido</th><th class="r">Líquido médio</th></tr></thead><tbody>
@@ -189,7 +238,7 @@
         <div class="insight mt">${m.conferencia.ok
           ? `Conferência: os funcionários e o líquido das ${m.conferencia.lotacoesConferidas} lotações batem com os totais impressos no relatório${m.conferencia.geral ? `. Total geral do relatório: ${int(m.conferencia.geral.funcionarios)} funcionários e ${brl(m.conferencia.geral.liquido)} líquido` : ""}.`
           : `Atenção: ${m.conferencia.diferencas.length} lotação(ões) com diferença entre o lido e o total impresso. Confira o arquivo antes de usar estes números.`}</div>
-      </div></div>`;
+      </div></div></div>`;
     return p;
   }
 
@@ -202,7 +251,7 @@
     inner.style.width = "";
     const disp = fit.clientHeight, alt = inner.scrollHeight;
     if (alt > disp) {
-      const s = Math.max(0.45, disp / alt);
+      const s = Math.max(0.4, disp / alt);
       inner.style.transform = `scale(${s})`;
       inner.style.transformOrigin = "top left";
       inner.style.width = `${100 / s}%`;
@@ -212,20 +261,20 @@
   /** Renderiza todas as folhas dentro de `container` (que precisa estar no DOM). */
   function gerar(m, container) {
     container.innerHTML = "";
-    const org = organograma(m);
-    container.appendChild(org);
+    const orgs = organograma(m, container);
     const setores = tabelaSetores(m, container);
     const pano = panorama(m);
     container.appendChild(pano);
     const peso = pesoSecretarias(m);
     container.appendChild(peso);
-    const todas = [org, ...setores, pano, peso];
+    const todas = [...orgs, ...setores, pano, peso];
     todas.forEach((p, i) => {
       const old = p.querySelector("footer.rf");
       if (old) old.outerHTML = rodape(m, i + 1, todas.length);
       else p.insertAdjacentHTML("beforeend", rodape(m, i + 1, todas.length));
     });
-    caber(org);
+    orgs.forEach(caber);
+    caber(peso);
     desenharPanorama(pano, m);
     return todas;
   }
