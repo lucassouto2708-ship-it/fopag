@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FOPAG · Organograma da Folha</title>
+  <meta name="description" content="Envie o TXT da folha de pagamento e receba o organograma, a tabela de setores e os gráficos de peso, prontos para baixar em PDF.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/relatorio.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="9" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 7v4M5 16v-3h14v3M12 11v5" fill="none" stroke-width="1.6"/></svg>
+      </span>
+      <div>
+        <strong>FOPAG</strong>
+        <span>Organograma da Folha de Pagamento</span>
+      </div>
+    </div>
+    <div class="acoes" id="acoes" hidden>
+      <button type="button" class="btn primario" id="btn-pdf">Baixar PDF</button>
+      <button type="button" class="btn" id="btn-csv">Baixar planilha (CSV)</button>
+      <button type="button" class="btn fantasma" id="btn-novo">Enviar outro arquivo</button>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <section class="envio" id="envio">
+      <label class="drop" id="drop" for="arquivo">
+        <input type="file" id="arquivo" accept=".txt,text/plain">
+        <span class="drop-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="drop-titulo">Arraste aqui o TXT da folha de pagamento</span>
+        <span class="drop-sub">ou clique para escolher o arquivo</span>
+      </label>
+      <ul class="dicas">
+        <li><b>Formato aceito:</b> TXT da folha em ordem de lotação (“F O L H A &nbsp;D E &nbsp;P A G A M E N T O”, ordem lotação/alfabética).</li>
+        <li><b>Privacidade:</b> o arquivo é lido no seu navegador. Nada é enviado para servidor nenhum.</li>
+        <li><b>Conferência:</b> a plataforma compara o que leu com os totais impressos no próprio relatório.</li>
+      </ul>
+      <p class="erro" id="erro" role="alert" hidden></p>
+    </section>
+
+    <section class="painel" id="painel" hidden>
+      <div class="resumo" id="resumo"></div>
+      <div class="conferencia" id="conferencia"></div>
+      <p class="nota">Clique no nome de uma secretaria ou setor no organograma para corrigir. A mudança vale para todas as páginas e fica salva neste navegador para os próximos arquivos do mesmo município.</p>
+    </section>
+
+    <div class="folhas" id="folhas" aria-live="polite"></div>
+  </main>
+
+  <script src="js/parser.js"></script>
+  <script src="js/modelo.js"></script>
+  <script src="js/relatorio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

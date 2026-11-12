@@ -1,0 +1,5 @@
+# Arquivos de folha têm dados pessoais: não versionar
+*.txt
+!requirements.txt
+.DS_Store
+Thumbs.db
