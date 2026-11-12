@@ -75,8 +75,8 @@ Também dá para abrir direto no computador: baixe o repositório e dê dois cli
 ## Estrutura
 
 ```
-index.html          tela de envio e visualização
-css/app.css         visual da plataforma (tema claro/escuro)
+index.html          tela de envio, painel do relatório e índice de páginas
+css/app.css         visual da plataforma (tokens de design, tema claro/escuro, responsivo)
 css/relatorio.css   visual das folhas A3 (o que vai para o PDF)
 js/parser.js        leitura do TXT e conferência dos totais
 js/modelo.js        hierarquia e limpeza dos nomes

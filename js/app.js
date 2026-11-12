@@ -17,6 +17,8 @@
 
   async function abrir(arquivo) {
     erro.hidden = true;
+    drop.classList.add("processando");
+    $("#drop-status").textContent = "Lendo " + arquivo.name + "…";
     try {
       const buf = await arquivo.arrayBuffer();
       const texto = window.FolhaParser.decode(buf);
@@ -30,6 +32,8 @@
       erro.hidden = false;
     } finally {
       input.value = "";
+      drop.classList.remove("processando");
+      $("#drop-status").textContent = "";
     }
   }
 
@@ -50,6 +54,11 @@
     $("#envio").hidden = true;
     $("#painel").hidden = false;
     $("#acoes").hidden = false;
+    $("#area").hidden = false;
+
+    $("#painel-titulo").textContent = "Relatório da folha" + (m.municipio ? " · " + m.municipio : "");
+    const contexto = [m.orgao, m.referencia, m.meta.calculo].filter(Boolean).map(esc).join(" · ");
+    $("#arquivo-nome").innerHTML = `<code>${esc(estado.arquivo)}</code>${contexto ? " · " + contexto : ""}`;
 
     $("#resumo").innerHTML = [
       ["Município", m.municipio || "—"],
@@ -78,14 +87,24 @@
     const rolagem = window.scrollY;
     box.classList.add("medindo");
     const folhas = window.FolhaRelatorio.gerar(estado.modelo, box);
-    // Envolve cada folha numa moldura escalada para caber na largura da tela.
-    folhas.forEach((f) => {
+    // Envolve cada folha numa moldura escalada para caber na largura da tela,
+    // com um rótulo (só na tela) e uma entrada no índice de páginas.
+    const itens = [];
+    folhas.forEach((f, i) => {
+      const titulo = tituloFolha(f);
+      const item = document.createElement("div");
+      item.className = "folha-item";
+      item.id = "folha-" + (i + 1);
+      item.innerHTML = `<div class="rotulo"><span><b>Página ${i + 1}</b> de ${folhas.length}</span><span>${esc(titulo)}</span></div>`;
       const mold = document.createElement("div");
       mold.className = "moldura";
-      f.replaceWith(mold);
+      f.replaceWith(item);
       mold.appendChild(f);
+      item.appendChild(mold);
+      itens.push({ id: item.id, titulo });
     });
     box.classList.remove("medindo");
+    montarIndice(itens);
     escalar();
     ativarEdicao();
     window.scrollTo(0, rolagem);
@@ -93,7 +112,8 @@
 
   function escalar() {
     const box = $("#folhas");
-    const disp = box.clientWidth;
+    const cs = getComputedStyle(box);
+    const disp = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     box.querySelectorAll(".moldura").forEach((mold) => {
       const f = mold.firstElementChild;
       const w = f.offsetWidth, h = f.offsetHeight;
@@ -103,6 +123,48 @@
       mold.style.height = `${h * s}px`;
     });
   }
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function tituloFolha(f) {
+    const h = f.querySelector(".rh h1");
+    if (!h) return "";
+    const c = h.cloneNode(true);
+    c.querySelectorAll("small").forEach((s) => s.remove());
+    return c.textContent.replace(/\s+/g, " ").trim();
+  }
+
+  /* Índice de páginas: navegação dentro do relatório e destaque da página visível. */
+  let observador = null;
+  function montarIndice(itens) {
+    const nav = $("#indice");
+    nav.innerHTML = `<h2>Páginas do relatório</h2><ol>${itens.map((x, i) =>
+      `<li><a href="#${x.id}" data-alvo="${x.id}"><span>${i + 1}</span><span>${esc(x.titulo)}</span></a></li>`).join("")}</ol>`;
+    nav.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const alvo = document.getElementById(a.dataset.alvo);
+      if (alvo) alvo.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      marcar(a.dataset.alvo);
+    }));
+    if (observador) observador.disconnect();
+    if ("IntersectionObserver" in window) {
+      const visiveis = new Map();
+      observador = new IntersectionObserver((entradas) => {
+        entradas.forEach((en) => visiveis.set(en.target.id, en.intersectionRatio));
+        let melhor = null, r = 0;
+        visiveis.forEach((v, k) => { if (v > r) { r = v; melhor = k; } });
+        if (melhor) marcar(melhor);
+      }, { threshold: [0, .25, .5, .75, 1] });
+      document.querySelectorAll(".folha-item").forEach((el) => observador.observe(el));
+    }
+    if (itens[0]) marcar(itens[0].id);
+  }
+  function marcar(id) {
+    document.querySelectorAll("#indice a").forEach((a) => {
+      if (a.dataset.alvo === id) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+
   let t;
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => estado.modelo && escalar(), 120); });
 
@@ -163,6 +225,9 @@
   $("#btn-novo").addEventListener("click", () => {
     estado.lido = estado.modelo = null;
     $("#folhas").innerHTML = "";
+    $("#indice").innerHTML = "";
+    if (observador) observador.disconnect();
+    $("#area").hidden = true;
     $("#painel").hidden = true;
     $("#acoes").hidden = true;
     $("#envio").hidden = false;
